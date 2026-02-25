@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Spin, Alert } from 'antd';
+import { Row, Col, Spin, Alert, Collapse } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import { KlineChart, RayLineConfig, ChartControls } from '@/components';
 import { useKlineData } from '@/hooks/useKlineData';
 import { get24hrTicker } from '@/services/binanceService';
@@ -47,7 +48,6 @@ const ChartPage: React.FC = () => {
   // 获取Polymarket数据
   useEffect(() => {
     if (showPolymarket && selectedSymbol.polymarketSlug) {
-      // 根据polymarketInterval计算数据点数量
       const dataPointsMap: Record<TimeInterval, number> = {
         '1m': 60,
         '3m': 60,
@@ -68,7 +68,6 @@ const ChartPage: React.FC = () => {
       
       const dataPoints = dataPointsMap[polymarketInterval] || 100;
       
-      // 使用模拟数据演示，传入时间周期
       const mockData = getMockPredictionData(
         selectedSymbol.symbol,
         priceInfo?.lastPrice || 0,
@@ -83,7 +82,7 @@ const ChartPage: React.FC = () => {
 
   const handleSymbolChange = (symbol: SymbolConfig) => {
     setSelectedSymbol(symbol);
-    setRayLines([]); // 切换币种时清空射线
+    setRayLines([]);
   };
 
   if (error) {
@@ -98,38 +97,56 @@ const ChartPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '16px' }}>
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <ChartControls
-            selectedSymbol={selectedSymbol}
-            selectedInterval={selectedInterval}
-            polymarketInterval={polymarketInterval}
-            showPolymarket={showPolymarket}
-            onSymbolChange={handleSymbolChange}
-            onIntervalChange={setSelectedInterval}
-            onPolymarketIntervalChange={setPolymarketInterval}
-            onPolymarketToggle={setShowPolymarket}
-            priceInfo={priceInfo}
-          />
-        </Col>
+    <div style={{ padding: '8px 12px', height: 'calc(100vh - 64px - 69px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ marginBottom: 8 }}>
+        <ChartControls
+          selectedSymbol={selectedSymbol}
+          selectedInterval={selectedInterval}
+          polymarketInterval={polymarketInterval}
+          showPolymarket={showPolymarket}
+          onSymbolChange={handleSymbolChange}
+          onIntervalChange={setSelectedInterval}
+          onPolymarketIntervalChange={setPolymarketInterval}
+          onPolymarketToggle={setShowPolymarket}
+          priceInfo={priceInfo}
+        />
+      </div>
 
-        <Col xs={24} lg={18}>
-          <Spin spinning={loading}>
+      <Row gutter={[8, 8]} style={{ flex: 1, minHeight: 0 }}>
+        <Col xs={24} xl={20} style={{ height: '100%' }}>
+          <Spin spinning={loading} style={{ height: '100%' }}>
             <KlineChart
               data={klineData}
               rayLines={rayLines}
               polymarketData={polymarketData}
-              height={600}
+              height={Math.max(500, window.innerHeight - 250)}
             />
           </Spin>
         </Col>
 
-        <Col xs={24} lg={6}>
-          <RayLineConfig
-            rayLines={rayLines}
-            onChange={setRayLines}
-            currentPrice={priceInfo?.lastPrice}
+        <Col xs={24} xl={4}>
+          <Collapse
+            defaultActiveKey={['rayline']}
+            size="small"
+            items={[
+              {
+                key: 'rayline',
+                label: (
+                  <span>
+                    <SettingOutlined style={{ marginRight: 8 }} />
+                    射线配置
+                  </span>
+                ),
+                children: (
+                  <RayLineConfig
+                    rayLines={rayLines}
+                    onChange={setRayLines}
+                    currentPrice={priceInfo?.lastPrice}
+                  />
+                ),
+              },
+            ]}
+            style={{ background: '#1a1a2e' }}
           />
         </Col>
       </Row>

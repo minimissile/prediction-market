@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Input, Button, ColorPicker, List, Space, InputNumber, Select, Popconfirm } from 'antd';
+import { Input, Button, ColorPicker, List, Space, InputNumber, Select, Popconfirm } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { RayLine } from '@/types';
 
@@ -55,106 +55,111 @@ const RayLineConfig: React.FC<RayLineConfigProps> = ({
   };
 
   return (
-    <Card title="射线配置" size="small">
-      <Space direction="vertical" style={{ width: '100%' }}>
-        {/* 添加新射线 */}
-        <Space wrap>
-          <InputNumber
-            placeholder="价格"
-            value={newPrice}
-            onChange={(value) => setNewPrice(value)}
-            style={{ width: 120 }}
-            precision={2}
-          />
+    <Space direction="vertical" style={{ width: '100%' }} size="small">
+      {/* 当前价格快捷添加 */}
+      {currentPrice && (
+        <Button
+          type="dashed"
+          size="small"
+          block
+          onClick={() => setNewPrice(currentPrice)}
+        >
+          当前价格: ${currentPrice.toLocaleString()}
+        </Button>
+      )}
+
+      {/* 添加新射线 */}
+      <Space direction="vertical" style={{ width: '100%' }} size={4}>
+        <InputNumber
+          placeholder="价格"
+          value={newPrice}
+          onChange={(value) => setNewPrice(value)}
+          style={{ width: '100%' }}
+          precision={2}
+          size="small"
+        />
+        <Space style={{ width: '100%' }}>
           <ColorPicker
             value={newColor}
             onChange={(color) => setNewColor(color.toHexString())}
             size="small"
           />
-          <Input
-            placeholder="标签(可选)"
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            style={{ width: 100 }}
-          />
           <Select
             value={newLineStyle}
             onChange={setNewLineStyle}
             options={lineStyleOptions}
-            style={{ width: 80 }}
+            style={{ flex: 1 }}
             size="small"
           />
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-            disabled={newPrice === null}
-            size="small"
-          >
-            添加
-          </Button>
         </Space>
-
-        {/* 当前价格快捷添加 */}
-        {currentPrice && (
-          <Button
-            type="dashed"
-            size="small"
-            onClick={() => setNewPrice(currentPrice)}
-          >
-            使用当前价格: ${currentPrice.toLocaleString()}
-          </Button>
-        )}
-
-        {/* 已添加的射线列表 */}
-        {rayLines.length > 0 && (
-          <List
-            size="small"
-            dataSource={rayLines}
-            renderItem={(ray) => (
-              <List.Item
-                actions={[
-                  <Popconfirm
-                    key="delete"
-                    title="确定删除此射线？"
-                    onConfirm={() => handleRemove(ray.id)}
-                    okText="确定"
-                    cancelText="取消"
-                  >
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      size="small"
-                    />
-                  </Popconfirm>,
-                ]}
-              >
-                <Space>
-                  <div
-                    style={{
-                      width: 16,
-                      height: 16,
-                      backgroundColor: ray.color,
-                      borderRadius: 2,
-                    }}
-                  />
-                  <span>{ray.label}</span>
-                  <InputNumber
-                    value={ray.price}
-                    onChange={(value) =>
-                      value && handleUpdateRay(ray.id, { price: value })
-                    }
-                    size="small"
-                    style={{ width: 100 }}
-                  />
-                </Space>
-              </List.Item>
-            )}
-          />
-        )}
+        <Input
+          placeholder="标签(可选)"
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+          size="small"
+        />
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+          disabled={newPrice === null}
+          size="small"
+          block
+        >
+          添加射线
+        </Button>
       </Space>
-    </Card>
+
+      {/* 已添加的射线列表 */}
+      {rayLines.length > 0 && (
+        <List
+          size="small"
+          dataSource={rayLines}
+          style={{ marginTop: 8 }}
+          renderItem={(ray) => (
+            <List.Item
+              style={{ padding: '4px 0' }}
+              actions={[
+                <Popconfirm
+                  key="delete"
+                  title="确定删除？"
+                  onConfirm={() => handleRemove(ray.id)}
+                  okText="确定"
+                  cancelText="取消"
+                >
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    size="small"
+                  />
+                </Popconfirm>,
+              ]}
+            >
+              <Space size={4}>
+                <div
+                  style={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: ray.color,
+                    borderRadius: 2,
+                    flexShrink: 0,
+                  }}
+                />
+                <InputNumber
+                  value={ray.price}
+                  onChange={(value) =>
+                    value && handleUpdateRay(ray.id, { price: value })
+                  }
+                  size="small"
+                  style={{ width: 90 }}
+                />
+              </Space>
+            </List.Item>
+          )}
+        />
+      )}
+    </Space>
   );
 };
 
