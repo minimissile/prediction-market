@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { PolymarketData } from '@/types';
+import type { PolymarketData, TimeInterval } from '@/types';
 import { API_CONFIG } from '@/config';
 
 const polymarketApi = axios.create({
@@ -67,13 +67,35 @@ export async function getMarketInfo(conditionId: string): Promise<{
 export function getMockPredictionData(
   _symbol: string,
   _targetPrice: number,
-  dataPoints: number = 100
+  dataPoints: number = 100,
+  interval: TimeInterval = '1h'
 ): PolymarketData[] {
   const now = Date.now() / 1000;
   const data: PolymarketData[] = [];
   
+  // 根据时间周期计算每个数据点的间隔（秒）
+  const intervalSeconds: Record<TimeInterval, number> = {
+    '1m': 60,
+    '3m': 180,
+    '5m': 300,
+    '15m': 900,
+    '30m': 1800,
+    '1h': 3600,
+    '2h': 7200,
+    '4h': 14400,
+    '6h': 21600,
+    '8h': 28800,
+    '12h': 43200,
+    '1d': 86400,
+    '3d': 259200,
+    '1w': 604800,
+    '1M': 2592000,
+  };
+  
+  const secondsPerPoint = intervalSeconds[interval] || 3600;
+  
   for (let i = 0; i < dataPoints; i++) {
-    const time = now - (dataPoints - i) * 3600; // 每小时一个数据点
+    const time = now - (dataPoints - i) * secondsPerPoint;
     // 模拟概率数据，随时间波动
     const baseProbability = 0.5;
     const noise = Math.sin(i * 0.1) * 0.2 + Math.random() * 0.1 - 0.05;

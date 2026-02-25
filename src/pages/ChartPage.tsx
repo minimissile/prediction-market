@@ -4,12 +4,13 @@ import { KlineChart, RayLineConfig, ChartControls } from '@/components';
 import { useKlineData } from '@/hooks/useKlineData';
 import { get24hrTicker } from '@/services/binanceService';
 import { getMockPredictionData } from '@/services/polymarketService';
-import { DEFAULT_SYMBOL, DEFAULT_INTERVAL } from '@/config';
+import { DEFAULT_SYMBOL, DEFAULT_INTERVAL, DEFAULT_POLYMARKET_INTERVAL } from '@/config';
 import type { SymbolConfig, TimeInterval, RayLine, PolymarketData } from '@/types';
 
 const ChartPage: React.FC = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<SymbolConfig>(DEFAULT_SYMBOL);
   const [selectedInterval, setSelectedInterval] = useState<TimeInterval>(DEFAULT_INTERVAL);
+  const [polymarketInterval, setPolymarketInterval] = useState<TimeInterval>(DEFAULT_POLYMARKET_INTERVAL);
   const [rayLines, setRayLines] = useState<RayLine[]>([]);
   const [showPolymarket, setShowPolymarket] = useState(false);
   const [polymarketData, setPolymarketData] = useState<PolymarketData[]>([]);
@@ -46,16 +47,39 @@ const ChartPage: React.FC = () => {
   // 获取Polymarket数据
   useEffect(() => {
     if (showPolymarket && selectedSymbol.polymarketSlug) {
-      // 使用模拟数据演示
+      // 根据polymarketInterval计算数据点数量
+      const dataPointsMap: Record<TimeInterval, number> = {
+        '1m': 60,
+        '3m': 60,
+        '5m': 120,
+        '15m': 96,
+        '30m': 48,
+        '1h': 72,
+        '2h': 48,
+        '4h': 42,
+        '6h': 28,
+        '8h': 21,
+        '12h': 14,
+        '1d': 30,
+        '3d': 30,
+        '1w': 12,
+        '1M': 12,
+      };
+      
+      const dataPoints = dataPointsMap[polymarketInterval] || 100;
+      
+      // 使用模拟数据演示，传入时间周期
       const mockData = getMockPredictionData(
         selectedSymbol.symbol,
-        priceInfo?.lastPrice || 0
+        priceInfo?.lastPrice || 0,
+        dataPoints,
+        polymarketInterval
       );
       setPolymarketData(mockData);
     } else {
       setPolymarketData([]);
     }
-  }, [showPolymarket, selectedSymbol, priceInfo?.lastPrice]);
+  }, [showPolymarket, selectedSymbol, priceInfo?.lastPrice, polymarketInterval]);
 
   const handleSymbolChange = (symbol: SymbolConfig) => {
     setSelectedSymbol(symbol);
@@ -80,9 +104,11 @@ const ChartPage: React.FC = () => {
           <ChartControls
             selectedSymbol={selectedSymbol}
             selectedInterval={selectedInterval}
+            polymarketInterval={polymarketInterval}
             showPolymarket={showPolymarket}
             onSymbolChange={handleSymbolChange}
             onIntervalChange={setSelectedInterval}
+            onPolymarketIntervalChange={setPolymarketInterval}
             onPolymarketToggle={setShowPolymarket}
             priceInfo={priceInfo}
           />

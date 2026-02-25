@@ -1,16 +1,19 @@
 import React from 'react';
-import { Card, Select, Switch, Space, Typography } from 'antd';
+import { Card, Select, Switch, Space, Typography, Divider } from 'antd';
+import { LineChartOutlined, FundProjectionScreenOutlined } from '@ant-design/icons';
 import type { SymbolConfig, TimeInterval } from '@/types';
-import { SYMBOLS, TIME_INTERVALS } from '@/config';
+import { SYMBOLS, TIME_INTERVALS, POLYMARKET_INTERVALS } from '@/config';
 
 const { Text } = Typography;
 
 interface ChartControlsProps {
   selectedSymbol: SymbolConfig;
   selectedInterval: TimeInterval;
+  polymarketInterval: TimeInterval;
   showPolymarket: boolean;
   onSymbolChange: (symbol: SymbolConfig) => void;
   onIntervalChange: (interval: TimeInterval) => void;
+  onPolymarketIntervalChange: (interval: TimeInterval) => void;
   onPolymarketToggle: (show: boolean) => void;
   priceInfo?: {
     lastPrice: number;
@@ -25,9 +28,11 @@ interface ChartControlsProps {
 const ChartControls: React.FC<ChartControlsProps> = ({
   selectedSymbol,
   selectedInterval,
+  polymarketInterval,
   showPolymarket,
   onSymbolChange,
   onIntervalChange,
+  onPolymarketIntervalChange,
   onPolymarketToggle,
   priceInfo,
 }) => {
@@ -36,7 +41,12 @@ const ChartControls: React.FC<ChartControlsProps> = ({
     label: s.displayName,
   }));
 
-  const intervalOptions = TIME_INTERVALS.map((i) => ({
+  const klineIntervalOptions = TIME_INTERVALS.map((i) => ({
+    value: i.value,
+    label: i.label,
+  }));
+
+  const polymarketIntervalOptions = POLYMARKET_INTERVALS.map((i) => ({
     value: i.value,
     label: i.label,
   }));
@@ -53,6 +63,7 @@ const ChartControls: React.FC<ChartControlsProps> = ({
   return (
     <Card size="small">
       <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        {/* 币种选择和K线周期 */}
         <Space wrap>
           <Select
             value={selectedSymbol.symbol}
@@ -60,19 +71,37 @@ const ChartControls: React.FC<ChartControlsProps> = ({
             options={symbolOptions}
             style={{ width: 140 }}
           />
-          <Select
-            value={selectedInterval}
-            onChange={onIntervalChange}
-            options={intervalOptions}
-            style={{ width: 100 }}
-          />
+          <Divider type="vertical" />
           <Space>
-            <Text>Polymarket叠加</Text>
+            <LineChartOutlined style={{ color: '#1890ff' }} />
+            <Text type="secondary">K线周期:</Text>
+            <Select
+              value={selectedInterval}
+              onChange={onIntervalChange}
+              options={klineIntervalOptions}
+              style={{ width: 100 }}
+            />
+          </Space>
+          <Divider type="vertical" />
+          {/* Polymarket控制 */}
+          <Space>
+            <FundProjectionScreenOutlined style={{ color: '#fa8c16' }} />
+            <Text type="secondary">Polymarket:</Text>
             <Switch
               checked={showPolymarket}
               onChange={onPolymarketToggle}
               disabled={!selectedSymbol.polymarketSlug}
+              size="small"
             />
+            {showPolymarket && selectedSymbol.polymarketSlug && (
+              <Select
+                value={polymarketInterval}
+                onChange={onPolymarketIntervalChange}
+                options={polymarketIntervalOptions}
+                style={{ width: 100 }}
+                size="small"
+              />
+            )}
           </Space>
         </Space>
 
