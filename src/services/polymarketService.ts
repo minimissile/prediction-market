@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { PolymarketData, TimeInterval } from '@/types';
+import type { PolymarketData, PolymarketMarketInfo, TimeInterval } from '@/types';
 import { API_CONFIG } from '@/config';
 
 const polymarketApi = axios.create({
@@ -63,13 +63,14 @@ export async function getMarketInfo(conditionId: string): Promise<{
 /**
  * 模拟获取价格预测数据
  * 用于演示目的，实际应用中应对接真实API
+ * 返回预测数据和市场信息（含开盘价）
  */
 export function getMockPredictionData(
   _symbol: string,
-  _targetPrice: number,
+  currentPrice: number,
   dataPoints: number = 100,
   interval: TimeInterval = '1h'
-): PolymarketData[] {
+): { data: PolymarketData[]; marketInfo: PolymarketMarketInfo } {
   const now = Date.now() / 1000;
   const data: PolymarketData[] = [];
   
@@ -108,5 +109,15 @@ export function getMockPredictionData(
     });
   }
   
-  return data;
+  // 模拟开盘价：基于当前价格的一个偏移值
+  const openPrice = currentPrice > 0 
+    ? currentPrice * (1 + (Math.random() * 0.1 - 0.05)) // 当前价格 ±5%
+    : 100000; // 默认值
+  
+  const marketInfo: PolymarketMarketInfo = {
+    openPrice: Math.round(openPrice * 100) / 100,
+    question: `Will price reach target?`,
+  };
+  
+  return { data, marketInfo };
 }

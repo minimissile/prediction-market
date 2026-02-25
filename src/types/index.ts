@@ -67,6 +67,13 @@ export interface PolymarketData {
   volume?: number;
 }
 
+// Polymarket市场信息
+export interface PolymarketMarketInfo {
+  openPrice: number;
+  question?: string;
+  outcomes?: string[];
+}
+
 // 图表配置
 export interface ChartConfig {
   symbol: SymbolConfig;
