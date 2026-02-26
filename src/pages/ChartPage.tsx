@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Spin, Alert, Collapse, Tag } from 'antd';
+import { Row, Col, Spin, Alert, Collapse, Tag, Switch, Space } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import { KlineChart, RayLineConfig, ChartControls } from '@/components';
 import { useKlineData } from '@/hooks/useKlineData';
@@ -34,6 +34,7 @@ const ChartPage: React.FC = () => {
   );
   const [rayLines, setRayLines] = useState<RayLine[]>([]);
   const [showPolymarket, setShowPolymarket] = useState(false);
+  const [showOpenPriceRays, setShowOpenPriceRays] = useState(true); // 控制开盘价射线显示
   const [polymarketData, setPolymarketData] = useState<PolymarketData[]>([]);
   const [polymarketOpenPrices, setPolymarketOpenPrices] = useState<
     { interval: TimeInterval; openPrice: number; label: string }[]
@@ -48,6 +49,7 @@ const ChartPage: React.FC = () => {
   } | null>(null);
 
   const prevShowPolymarket = useRef(showPolymarket);
+  const prevShowOpenPriceRays = useRef(showOpenPriceRays);
 
   const {
     data: klineData,
@@ -125,7 +127,8 @@ const ChartPage: React.FC = () => {
 
   // 处理Polymarket多周期开盘价射线
   useEffect(() => {
-    if (showPolymarket && polymarketOpenPrices.length > 0) {
+    // 当开启Polymarket且开启射线显示且有开盘价时，添加射线
+    if (showPolymarket && showOpenPriceRays && polymarketOpenPrices.length > 0) {
       setRayLines((prev) => {
         // 移除所有旧的Polymarket射线
         const filtered = prev.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
@@ -144,13 +147,17 @@ const ChartPage: React.FC = () => {
       });
     }
 
-    // 当关闭Polymarket时，移除所有Polymarket射线
-    if (!showPolymarket && prevShowPolymarket.current) {
+    // 当关闭Polymarket或关闭射线显示时，移除所有Polymarket射线
+    if (
+      (!showPolymarket && prevShowPolymarket.current) ||
+      (!showOpenPriceRays && prevShowOpenPriceRays.current)
+    ) {
       setRayLines((prev) => prev.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX)));
     }
 
     prevShowPolymarket.current = showPolymarket;
-  }, [showPolymarket, polymarketOpenPrices]);
+    prevShowOpenPriceRays.current = showOpenPriceRays;
+  }, [showPolymarket, showOpenPriceRays, polymarketOpenPrices]);
 
   const handleSymbolChange = (symbol: SymbolConfig) => {
     setSelectedSymbol(symbol);
@@ -162,7 +169,7 @@ const ChartPage: React.FC = () => {
   const handleRayLinesChange = (newRayLines: RayLine[]) => {
     // 保留Polymarket射线
     const polymarketRays = rayLines.filter((ray) => ray.id.startsWith(POLYMARKET_RAY_PREFIX));
-    if (showPolymarket && polymarketRays.length > 0) {
+    if (showPolymarket && showOpenPriceRays && polymarketRays.length > 0) {
       // 合并用户射线和Polymarket射线
       const userRays = newRayLines.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
       setRayLines([...userRays, ...polymarketRays]);
@@ -238,7 +245,19 @@ const ChartPage: React.FC = () => {
                 ? [
                     {
                       key: 'polymarket',
-                      label: <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>,
+                      label: (
+                        <Space
+                          style={{ width: '100%', justifyContent: 'space-between' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>
+                          <Switch
+                            size="small"
+                            checked={showOpenPriceRays}
+                            onChange={setShowOpenPriceRays}
+                          />
+                        </Space>
+                      ),
                       children: (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {polymarketOpenPrices.map((item) => (
@@ -248,6 +267,7 @@ const ChartPage: React.FC = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
+                                opacity: showOpenPriceRays ? 1 : 0.5,
                               }}
                             >
                               <Tag color={INTERVAL_COLORS[item.interval]} style={{ margin: 0 }}>
