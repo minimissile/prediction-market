@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Spin, Alert, Collapse, Tag, Switch, Space } from 'antd';
+import { Spin, Alert, Collapse, Tag, Switch, Space, Drawer, FloatButton } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import { KlineChart, RayLineConfig, ChartControls } from '@/components';
 import { useKlineData } from '@/hooks/useKlineData';
@@ -34,7 +34,7 @@ const ChartPage: React.FC = () => {
   );
   const [rayLines, setRayLines] = useState<RayLine[]>([]);
   const [showPolymarket, setShowPolymarket] = useState(false);
-  const [showOpenPriceRays, setShowOpenPriceRays] = useState(true); // 控制开盘价射线显示
+  const [showOpenPriceRays, setShowOpenPriceRays] = useState(true);
   const [polymarketData, setPolymarketData] = useState<PolymarketData[]>([]);
   const [polymarketOpenPrices, setPolymarketOpenPrices] = useState<
     { interval: TimeInterval; openPrice: number; label: string }[]
@@ -47,6 +47,7 @@ const ChartPage: React.FC = () => {
     lowPrice: number;
     volume: number;
   } | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const prevShowPolymarket = useRef(showPolymarket);
   const prevShowOpenPriceRays = useRef(showOpenPriceRays);
@@ -127,13 +128,9 @@ const ChartPage: React.FC = () => {
 
   // 处理Polymarket多周期开盘价射线
   useEffect(() => {
-    // 当开启Polymarket且开启射线显示且有开盘价时，添加射线
     if (showPolymarket && showOpenPriceRays && polymarketOpenPrices.length > 0) {
       setRayLines((prev) => {
-        // 移除所有旧的Polymarket射线
         const filtered = prev.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
-
-        // 添加所有时间周期的开盘价射线
         const polymarketRays: RayLine[] = polymarketOpenPrices.map((item) => ({
           id: `${POLYMARKET_RAY_PREFIX}${item.interval}`,
           price: item.openPrice,
@@ -142,12 +139,10 @@ const ChartPage: React.FC = () => {
           lineStyle: 'dashed',
           lineWidth: 1,
         }));
-
         return [...filtered, ...polymarketRays];
       });
     }
 
-    // 当关闭Polymarket或关闭射线显示时，移除所有Polymarket射线
     if (
       (!showPolymarket && prevShowPolymarket.current) ||
       (!showOpenPriceRays && prevShowOpenPriceRays.current)
@@ -161,16 +156,12 @@ const ChartPage: React.FC = () => {
 
   const handleSymbolChange = (symbol: SymbolConfig) => {
     setSelectedSymbol(symbol);
-    // 切换币种时清空用户添加的射线，保留Polymarket射线会在下次effect中更新
     setRayLines((prev) => prev.filter((ray) => ray.id.startsWith(POLYMARKET_RAY_PREFIX)));
   };
 
-  // 处理用户手动修改射线
   const handleRayLinesChange = (newRayLines: RayLine[]) => {
-    // 保留Polymarket射线
     const polymarketRays = rayLines.filter((ray) => ray.id.startsWith(POLYMARKET_RAY_PREFIX));
     if (showPolymarket && showOpenPriceRays && polymarketRays.length > 0) {
-      // 合并用户射线和Polymarket射线
       const userRays = newRayLines.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
       setRayLines([...userRays, ...polymarketRays]);
       return;
@@ -182,14 +173,13 @@ const ChartPage: React.FC = () => {
     return <Alert message="数据加载失败" description={error.message} type="error" showIcon />;
   }
 
-  // 过滤掉Polymarket射线，只显示用户添加的射线供编辑
   const userRayLines = rayLines.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
 
   return (
     <div
       style={{
-        padding: '8px 12px',
-        height: 'calc(100vh - 64px - 69px)',
+        padding: '8px',
+        height: '100vh',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -208,86 +198,106 @@ const ChartPage: React.FC = () => {
         />
       </div>
 
-      <Row gutter={[8, 8]} style={{ flex: 1, minHeight: 0 }}>
-        <Col xs={24} xl={20} style={{ height: '100%' }}>
-          <Spin spinning={loading} style={{ height: '100%' }}>
-            <KlineChart
-              data={klineData}
-              rayLines={rayLines}
-              polymarketData={polymarketData}
-              height={Math.max(500, window.innerHeight - 250)}
-            />
-          </Spin>
-        </Col>
-
-        <Col xs={24} xl={4}>
-          <Collapse
-            defaultActiveKey={['rayline', 'polymarket']}
-            size="small"
-            items={[
-              {
-                key: 'rayline',
-                label: (
-                  <span>
-                    <SettingOutlined style={{ marginRight: 8 }} />
-                    自定义射线
-                  </span>
-                ),
-                children: (
-                  <RayLineConfig
-                    rayLines={userRayLines}
-                    onChange={handleRayLinesChange}
-                    currentPrice={priceInfo?.lastPrice}
-                  />
-                ),
-              },
-              ...(showPolymarket && polymarketOpenPrices.length > 0
-                ? [
-                    {
-                      key: 'polymarket',
-                      label: (
-                        <Space
-                          style={{ width: '100%', justifyContent: 'space-between' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>
-                          <Switch
-                            size="small"
-                            checked={showOpenPriceRays}
-                            onChange={setShowOpenPriceRays}
-                          />
-                        </Space>
-                      ),
-                      children: (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {polymarketOpenPrices.map((item) => (
-                            <div
-                              key={item.interval}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                opacity: showOpenPriceRays ? 1 : 0.5,
-                              }}
-                            >
-                              <Tag color={INTERVAL_COLORS[item.interval]} style={{ margin: 0 }}>
-                                {item.label}
-                              </Tag>
-                              <span style={{ color: '#fff', fontWeight: 500 }}>
-                                ${item.openPrice.toLocaleString()}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
-            style={{ background: '#1a1a2e' }}
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Spin spinning={loading} style={{ height: '100%' }}>
+          <KlineChart
+            data={klineData}
+            rayLines={rayLines}
+            polymarketData={polymarketData}
+            height={window.innerHeight - 120}
           />
-        </Col>
-      </Row>
+        </Spin>
+      </div>
+
+      {/* 设置按钮 */}
+      <FloatButton
+        icon={<SettingOutlined />}
+        type="primary"
+        style={{ right: 24, bottom: 24 }}
+        onClick={() => setDrawerOpen(true)}
+      />
+
+      {/* 侧边栏 */}
+      <Drawer
+        title="设置"
+        placement="right"
+        onClose={() => setDrawerOpen(false)}
+        open={drawerOpen}
+        width={320}
+        styles={{
+          header: { background: '#1a1a2e', borderBottom: '1px solid #2a2a3e' },
+          body: { background: '#1a1a2e', padding: 0 },
+        }}
+      >
+        <Collapse
+          defaultActiveKey={['rayline', 'polymarket']}
+          size="small"
+          bordered={false}
+          style={{ background: 'transparent' }}
+          items={[
+            {
+              key: 'rayline',
+              label: (
+                <span style={{ color: '#fff' }}>
+                  <SettingOutlined style={{ marginRight: 8 }} />
+                  自定义射线
+                </span>
+              ),
+              children: (
+                <RayLineConfig
+                  rayLines={userRayLines}
+                  onChange={handleRayLinesChange}
+                  currentPrice={priceInfo?.lastPrice}
+                />
+              ),
+              style: { borderBottom: '1px solid #2a2a3e' },
+            },
+            ...(showPolymarket && polymarketOpenPrices.length > 0
+              ? [
+                  {
+                    key: 'polymarket',
+                    label: (
+                      <Space
+                        style={{ width: '100%', justifyContent: 'space-between' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>
+                        <Switch
+                          size="small"
+                          checked={showOpenPriceRays}
+                          onChange={setShowOpenPriceRays}
+                        />
+                      </Space>
+                    ),
+                    children: (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {polymarketOpenPrices.map((item) => (
+                          <div
+                            key={item.interval}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              opacity: showOpenPriceRays ? 1 : 0.5,
+                            }}
+                          >
+                            <Tag color={INTERVAL_COLORS[item.interval]} style={{ margin: 0 }}>
+                              {item.label}
+                            </Tag>
+                            <span style={{ color: '#fff', fontWeight: 500 }}>
+                              ${item.openPrice.toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ),
+                    style: { borderBottom: '1px solid #2a2a3e' },
+                  },
+                ]
+              : []),
+          ]}
+        />
+      </Drawer>
     </div>
   );
 };
