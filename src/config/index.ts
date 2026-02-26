@@ -50,7 +50,6 @@ export const TIME_INTERVALS: { value: TimeInterval; label: string }[] = [
   { value: '1h', label: '1小时' },
   { value: '4h', label: '4小时' },
   { value: '1d', label: '1天' },
-  { value: '1w', label: '1周' },
 ];
 
 // Polymarket预测市场时间周期配置
@@ -64,8 +63,8 @@ export const POLYMARKET_INTERVALS: { value: TimeInterval; label: string }[] = [
 
 // 默认配置
 export const DEFAULT_SYMBOL = SYMBOLS[0]!;
-export const DEFAULT_INTERVAL: TimeInterval = '1h';
-export const DEFAULT_POLYMARKET_INTERVAL: TimeInterval = '1h';
+export const DEFAULT_INTERVAL: TimeInterval = '3m';
+export const DEFAULT_POLYMARKET_INTERVAL: TimeInterval = '5m';
 
 // API配置
 export const API_CONFIG = {

@@ -9,6 +9,20 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 750,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-antd': ['antd'],
+          'vendor-antd-icons': ['@ant-design/icons'],
+          'vendor-charts': ['lightweight-charts'],
+          'vendor-crypto': ['@polymarket/clob-client', '@ethersproject/wallet'],
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     proxy: {
