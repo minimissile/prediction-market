@@ -25,7 +25,9 @@ const POLYMARKET_DEFAULT_INTERVALS: TimeInterval[] = ['5m', '15m', '1h', '4h', '
 
 const ChartPage: React.FC = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<SymbolConfig>(DEFAULT_SYMBOL);
-  const [selectedInterval, setSelectedInterval] = useState<TimeInterval>(DEFAULT_INTERVAL);
+  const [selectedInterval, setSelectedInterval] = useState<TimeInterval>(
+    () => (localStorage.getItem('pm_kline_interval') as TimeInterval) || DEFAULT_INTERVAL
+  );
   const [rayLines, setRayLines] = useState<RayLine[]>([]);
   const [showPolymarket] = useState(true);
   const [visibleIntervals, setVisibleIntervals] = useState<Record<TimeInterval, boolean>>({
@@ -229,7 +231,10 @@ const ChartPage: React.FC = () => {
           selectedSymbol={selectedSymbol}
           selectedInterval={selectedInterval}
           onSymbolChange={handleSymbolChange}
-          onIntervalChange={setSelectedInterval}
+          onIntervalChange={(val: TimeInterval) => {
+            setSelectedInterval(val);
+            localStorage.setItem('pm_kline_interval', val);
+          }}
           priceInfo={priceInfo}
         />
       </div>
@@ -292,7 +297,24 @@ const ChartPage: React.FC = () => {
               ? [
                   {
                     key: 'polymarket',
-                    label: <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>,
+                    label: (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>
+                        <Switch
+                          size="small"
+                          checked={Object.values(visibleIntervals).some(Boolean)}
+                          onClick={(_, e) => e.stopPropagation()}
+                          onChange={(checked) => {
+                            const updated = { ...visibleIntervals } as Record<TimeInterval, boolean>;
+                            for (const key of Object.keys(updated)) {
+                              updated[key as TimeInterval] = checked;
+                            }
+                            setVisibleIntervals(updated);
+                          }}
+                          style={{ marginRight: 8 }}
+                        />
+                      </div>
+                    ),
                     children: (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {polymarketOpenPrices.map((item) => {

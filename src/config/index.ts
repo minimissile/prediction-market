@@ -43,6 +43,7 @@ export const SYMBOLS: SymbolConfig[] = [
 // K线时间周期配置
 export const TIME_INTERVALS: { value: TimeInterval; label: string }[] = [
   { value: '1m', label: '1分钟' },
+  { value: '3m', label: '3分钟' },
   { value: '5m', label: '5分钟' },
   { value: '15m', label: '15分钟' },
   { value: '30m', label: '30分钟' },
