@@ -13,7 +13,9 @@ const POLYMARKET_OPEN_PRICE_RAY_ID = 'polymarket-open-price';
 const ChartPage: React.FC = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<SymbolConfig>(DEFAULT_SYMBOL);
   const [selectedInterval, setSelectedInterval] = useState<TimeInterval>(DEFAULT_INTERVAL);
-  const [polymarketInterval, setPolymarketInterval] = useState<TimeInterval>(DEFAULT_POLYMARKET_INTERVAL);
+  const [polymarketInterval, setPolymarketInterval] = useState<TimeInterval>(
+    DEFAULT_POLYMARKET_INTERVAL
+  );
   const [rayLines, setRayLines] = useState<RayLine[]>([]);
   const [showPolymarket, setShowPolymarket] = useState(false);
   const [polymarketData, setPolymarketData] = useState<PolymarketData[]>([]);
@@ -26,10 +28,14 @@ const ChartPage: React.FC = () => {
     lowPrice: number;
     volume: number;
   } | null>(null);
-  
+
   const prevShowPolymarket = useRef(showPolymarket);
 
-  const { data: klineData, loading, error } = useKlineData({
+  const {
+    data: klineData,
+    loading,
+    error,
+  } = useKlineData({
     symbol: selectedSymbol.symbol,
     interval: selectedInterval,
   });
@@ -70,9 +76,9 @@ const ChartPage: React.FC = () => {
         '1w': 12,
         '1M': 12,
       };
-      
+
       const dataPoints = dataPointsMap[polymarketInterval] || 100;
-      
+
       const { data, marketInfo } = getMockPredictionData(
         selectedSymbol.symbol,
         priceInfo?.lastPrice || 0,
@@ -106,12 +112,12 @@ const ChartPage: React.FC = () => {
         return [...filtered, openPriceRay];
       });
     }
-    
+
     // 当关闭Polymarket时，移除开盘价射线
     if (!showPolymarket && prevShowPolymarket.current) {
       setRayLines((prev) => prev.filter((ray) => ray.id !== POLYMARKET_OPEN_PRICE_RAY_ID));
     }
-    
+
     prevShowPolymarket.current = showPolymarket;
   }, [showPolymarket, polymarketOpenPrice]);
 
@@ -137,21 +143,21 @@ const ChartPage: React.FC = () => {
   };
 
   if (error) {
-    return (
-      <Alert
-        message="数据加载失败"
-        description={error.message}
-        type="error"
-        showIcon
-      />
-    );
+    return <Alert message="数据加载失败" description={error.message} type="error" showIcon />;
   }
 
   // 过滤掉Polymarket射线，只显示用户添加的射线供编辑
   const userRayLines = rayLines.filter((ray) => ray.id !== POLYMARKET_OPEN_PRICE_RAY_ID);
 
   return (
-    <div style={{ padding: '8px 12px', height: 'calc(100vh - 64px - 69px)', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        padding: '8px 12px',
+        height: 'calc(100vh - 64px - 69px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <div style={{ marginBottom: 8 }}>
         <ChartControls
           selectedSymbol={selectedSymbol}
@@ -203,13 +209,15 @@ const ChartPage: React.FC = () => {
             style={{ background: '#1a1a2e' }}
           />
           {showPolymarket && polymarketOpenPrice && (
-            <div style={{ 
-              marginTop: 8, 
-              padding: '8px 12px', 
-              background: '#1a1a2e', 
-              borderRadius: 6,
-              border: '1px solid #fa8c16'
-            }}>
+            <div
+              style={{
+                marginTop: 8,
+                padding: '8px 12px',
+                background: '#1a1a2e',
+                borderRadius: 6,
+                border: '1px solid #fa8c16',
+              }}
+            >
               <div style={{ color: '#fa8c16', fontSize: 12, marginBottom: 4 }}>
                 Polymarket 开盘价
               </div>

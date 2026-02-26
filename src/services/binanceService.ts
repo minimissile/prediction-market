@@ -29,10 +29,9 @@ export async function getKlines(
  * 获取最新价格
  */
 export async function getTickerPrice(symbol: string): Promise<number> {
-  const response = await binanceApi.get<{ symbol: string; price: string }>(
-    '/api/v3/ticker/price',
-    { params: { symbol } }
-  );
+  const response = await binanceApi.get<{ symbol: string; price: string }>('/api/v3/ticker/price', {
+    params: { symbol },
+  });
   return parseFloat(response.data.price);
 }
 
@@ -85,14 +84,12 @@ export function createKlineWebSocket(
   onMessage: (data: KlineData) => void
 ): WebSocket {
   const wsSymbol = symbol.toLowerCase();
-  const ws = new WebSocket(
-    `${API_CONFIG.binance.wsUrl}/${wsSymbol}@kline_${interval}`
-  );
+  const ws = new WebSocket(`${API_CONFIG.binance.wsUrl}/${wsSymbol}@kline_${interval}`);
 
   ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
     const kline = message.k;
-    
+
     if (kline) {
       onMessage({
         time: kline.t / 1000,

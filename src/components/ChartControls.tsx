@@ -108,31 +108,46 @@ const ChartControls: React.FC<ChartControlsProps> = ({
         {priceInfo && (
           <Space wrap size="large">
             <Space direction="vertical" size={0}>
-              <Text type="secondary" style={{ fontSize: 12 }}>最新价格</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                最新价格
+              </Text>
               <Text strong style={{ fontSize: 18, color: isPositive ? '#26a69a' : '#ef5350' }}>
-                ${priceInfo.lastPrice.toLocaleString(undefined, { 
+                $
+                {priceInfo.lastPrice.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
-                  maximumFractionDigits: selectedSymbol.pricePrecision 
+                  maximumFractionDigits: selectedSymbol.pricePrecision,
                 })}
               </Text>
             </Space>
             <Space direction="vertical" size={0}>
-              <Text type="secondary" style={{ fontSize: 12 }}>24h涨跌</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                24h涨跌
+              </Text>
               <Text style={{ color: isPositive ? '#26a69a' : '#ef5350' }}>
-                {isPositive ? '+' : ''}{priceInfo.priceChange.toFixed(2)} ({isPositive ? '+' : ''}{priceInfo.priceChangePercent.toFixed(2)}%)
+                {isPositive ? '+' : ''}
+                {priceInfo.priceChange.toFixed(2)} ({isPositive ? '+' : ''}
+                {priceInfo.priceChangePercent.toFixed(2)}%)
               </Text>
             </Space>
             <Space direction="vertical" size={0}>
-              <Text type="secondary" style={{ fontSize: 12 }}>24h最高</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                24h最高
+              </Text>
               <Text>${priceInfo.highPrice.toLocaleString()}</Text>
             </Space>
             <Space direction="vertical" size={0}>
-              <Text type="secondary" style={{ fontSize: 12 }}>24h最低</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                24h最低
+              </Text>
               <Text>${priceInfo.lowPrice.toLocaleString()}</Text>
             </Space>
             <Space direction="vertical" size={0}>
-              <Text type="secondary" style={{ fontSize: 12 }}>24h成交量</Text>
-              <Text>{(priceInfo.volume / 1000).toFixed(2)}K {selectedSymbol.baseAsset}</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                24h成交量
+              </Text>
+              <Text>
+                {(priceInfo.volume / 1000).toFixed(2)}K {selectedSymbol.baseAsset}
+              </Text>
             </Space>
           </Space>
         )}

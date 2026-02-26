@@ -99,7 +99,9 @@ const KlineChart: React.FC<KlineChartProps> = ({
     if (onCrosshairMove) {
       chart.subscribeCrosshairMove((param) => {
         if (param.time && candlestickSeriesRef.current) {
-          const data = param.seriesData.get(candlestickSeriesRef.current) as CandlestickData | undefined;
+          const data = param.seriesData.get(candlestickSeriesRef.current) as
+            | CandlestickData
+            | undefined;
           onCrosshairMove(data?.close ?? null, param.time);
         } else {
           onCrosshairMove(null, null);
@@ -178,7 +180,7 @@ const KlineChart: React.FC<KlineChartProps> = ({
       // 创建从第一个数据点到最后一个数据点的水平线
       const firstTime = data[0]?.time;
       const lastTime = data[data.length - 1]?.time;
-      
+
       if (firstTime !== undefined && lastTime !== undefined) {
         const lineData: LineData[] = [
           { time: firstTime as Time, value: ray.price },

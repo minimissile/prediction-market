@@ -61,12 +61,12 @@ export function useKlineData({
         if (prevData.length === 0) return prevData;
 
         const lastKline = prevData[prevData.length - 1];
-        
+
         // 如果是同一根K线，更新它
         if (lastKline && lastKline.time === newKline.time) {
           return [...prevData.slice(0, -1), newKline];
         }
-        
+
         // 如果是新的K线，添加到末尾
         if (!lastKline || newKline.time > lastKline.time) {
           return [...prevData.slice(1), newKline];

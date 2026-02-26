@@ -15,11 +15,7 @@ const lineStyleOptions = [
   { value: 'dotted', label: '点线' },
 ];
 
-const RayLineConfig: React.FC<RayLineConfigProps> = ({
-  rayLines,
-  onChange,
-  currentPrice,
-}) => {
+const RayLineConfig: React.FC<RayLineConfigProps> = ({ rayLines, onChange, currentPrice }) => {
   const [newPrice, setNewPrice] = useState<number | null>(currentPrice || null);
   const [newColor, setNewColor] = useState('#ff9800');
   const [newLabel, setNewLabel] = useState('');
@@ -47,23 +43,14 @@ const RayLineConfig: React.FC<RayLineConfigProps> = ({
   };
 
   const handleUpdateRay = (id: string, updates: Partial<RayLine>) => {
-    onChange(
-      rayLines.map((ray) =>
-        ray.id === id ? { ...ray, ...updates } : ray
-      )
-    );
+    onChange(rayLines.map((ray) => (ray.id === id ? { ...ray, ...updates } : ray)));
   };
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="small">
       {/* 当前价格快捷添加 */}
       {currentPrice && (
-        <Button
-          type="dashed"
-          size="small"
-          block
-          onClick={() => setNewPrice(currentPrice)}
-        >
+        <Button type="dashed" size="small" block onClick={() => setNewPrice(currentPrice)}>
           当前价格: ${currentPrice.toLocaleString()}
         </Button>
       )}
@@ -127,12 +114,7 @@ const RayLineConfig: React.FC<RayLineConfigProps> = ({
                   okText="确定"
                   cancelText="取消"
                 >
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    size="small"
-                  />
+                  <Button type="text" danger icon={<DeleteOutlined />} size="small" />
                 </Popconfirm>,
               ]}
             >
@@ -148,9 +130,7 @@ const RayLineConfig: React.FC<RayLineConfigProps> = ({
                 />
                 <InputNumber
                   value={ray.price}
-                  onChange={(value) =>
-                    value && handleUpdateRay(ray.id, { price: value })
-                  }
+                  onChange={(value) => value && handleUpdateRay(ray.id, { price: value })}
                   size="small"
                   style={{ width: 90 }}
                 />
