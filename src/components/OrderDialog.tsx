@@ -1,3 +1,7 @@
+/**
+ * OrderDialog - 下单弹窗组件
+ * 提供 Polymarket 预测市场下单功能，支持周期、方向、金额选择和钱包私钥管理
+ */
 import React, { useState, useEffect } from 'react';
 import {
   Modal,

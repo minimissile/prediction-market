@@ -1,3 +1,7 @@
+/**
+ * ChartControls - 图表控制面板组件
+ * 提供币种选择、K线周期切换和实时价格信息展示
+ */
 import React from 'react';
 import { Card, Select, Space, Typography, Divider } from 'antd';
 import { LineChartOutlined } from '@ant-design/icons';

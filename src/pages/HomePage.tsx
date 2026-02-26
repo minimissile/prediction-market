@@ -1,3 +1,7 @@
+/**
+ * HomePage - 首页
+ * 展示项目介绍、功能特性和动态背景动画
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { Card, Typography, Row, Col, Button, Space, Badge } from 'antd';
 import {

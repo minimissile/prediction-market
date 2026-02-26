@@ -1,3 +1,7 @@
+/**
+ * ChartPage - 图表页面
+ * 展示K线图表、Polymarket预测数据，提供设置侧栏和下单功能
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { Spin, Alert, Collapse, Tag, Switch, Drawer, FloatButton } from 'antd';
 import { SettingOutlined, TransactionOutlined } from '@ant-design/icons';

@@ -1,3 +1,7 @@
+/**
+ * AppLayout - 应用布局组件
+ * 提供全局页面布局框架
+ */
 import React from 'react';
 import { Layout } from 'antd';
 import { Outlet } from 'react-router-dom';

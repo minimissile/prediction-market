@@ -1,3 +1,7 @@
+/**
+ * RayLineConfig - 射线配置组件
+ * 用于管理图表上的自定义射线，支持添加、编辑、删除射线
+ */
 import React, { useState } from 'react';
 import { Input, Button, ColorPicker, List, Space, InputNumber, Select, Popconfirm } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';

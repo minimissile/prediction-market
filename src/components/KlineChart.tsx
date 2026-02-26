@@ -1,3 +1,7 @@
+/**
+ * KlineChart - K线图表组件
+ * 基于 lightweight-charts 实现的K线图，支持射线叠加显示
+ */
 import React, { useEffect, useRef, useCallback } from 'react';
 import {
   createChart,
