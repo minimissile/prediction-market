@@ -104,3 +104,65 @@ export function createKlineWebSocket(
 
   return ws;
 }
+
+/**
+ * 获取当前周期的K线数据（用于获取开盘价）
+ */
+export async function getCurrentKline(
+  symbol: string,
+  interval: TimeInterval
+): Promise<KlineData | null> {
+  try {
+    const response = await binanceApi.get<BinanceKlineRaw[]>('/api/v3/klines', {
+      params: {
+        symbol,
+        interval,
+        limit: 1,
+      },
+    });
+
+    if (response.data && response.data.length > 0 && response.data[0]) {
+      return parseKlineData(response.data[0]);
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to get current kline:', error);
+    return null;
+  }
+}
+
+/**
+ * 批量获取多个周期的当前K线开盘价
+ */
+export async function getMultiIntervalOpenPrices(
+  symbol: string,
+  intervals: TimeInterval[]
+): Promise<{ interval: TimeInterval; openPrice: number; openTime: number; closeTime: number }[]> {
+  const results = await Promise.all(
+    intervals.map(async (interval) => {
+      const kline = await getCurrentKline(symbol, interval);
+      if (kline) {
+        // 根据周期计算结束时间
+        const intervalSeconds: Record<string, number> = {
+          '5m': 300,
+          '15m': 900,
+          '1h': 3600,
+          '4h': 14400,
+          '1d': 86400,
+        };
+        const seconds = intervalSeconds[interval] || 3600;
+        const closeTime = (kline.time + seconds) * 1000;
+
+        return {
+          interval,
+          openPrice: kline.open,
+          openTime: kline.time * 1000,
+          closeTime,
+        };
+      }
+      return null;
+    })
+  );
+
+  return results.filter((r): r is NonNullable<typeof r> => r !== null);
+}

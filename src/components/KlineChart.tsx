@@ -33,6 +33,7 @@ const KlineChart: React.FC<KlineChartProps> = ({
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const polymarketSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const rayLinesRef = useRef<ISeriesApi<'Line'>[]>([]);
+  const isInitialLoadRef = useRef(true);
 
   // 初始化图表
   useEffect(() => {
@@ -109,7 +110,7 @@ const KlineChart: React.FC<KlineChartProps> = ({
       });
     }
 
-    // 响应窗口大小变化
+    // 响应容器大小变化
     const handleResize = () => {
       if (containerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
@@ -118,14 +119,22 @@ const KlineChart: React.FC<KlineChartProps> = ({
       }
     };
 
+    // 使用 ResizeObserver 监听容器大小变化
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(containerRef.current);
+
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       candlestickSeriesRef.current = null;
       volumeSeriesRef.current = null;
+      isInitialLoadRef.current = true;
     };
   }, [height, onCrosshairMove]);
 
@@ -150,8 +159,11 @@ const KlineChart: React.FC<KlineChartProps> = ({
     candlestickSeriesRef.current.setData(chartData);
     volumeSeriesRef.current.setData(volumeData);
 
-    // 自适应显示范围
-    chartRef.current?.timeScale().fitContent();
+    // 仅首次加载时自适应显示范围
+    if (isInitialLoadRef.current) {
+      chartRef.current?.timeScale().fitContent();
+      isInitialLoadRef.current = false;
+    }
   }, [data]);
 
   // 更新射线
@@ -235,7 +247,36 @@ const KlineChart: React.FC<KlineChartProps> = ({
     }
   }, [polymarketData]);
 
-  return <div ref={containerRef} className="kline-chart-container" />;
+  // 重置图表视图
+  const handleResetChart = useCallback(() => {
+    chartRef.current?.timeScale().fitContent();
+  }, []);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div ref={containerRef} className="kline-chart-container" />
+      <button
+        onClick={handleResetChart}
+        style={{
+          position: 'absolute',
+          top: 8,
+          left: 8,
+          padding: '4px 10px',
+          fontSize: 12,
+          background: 'rgba(42, 42, 62, 0.85)',
+          color: '#d1d4dc',
+          border: '1px solid #3a3a4e',
+          borderRadius: 4,
+          cursor: 'pointer',
+          zIndex: 10,
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(60, 60, 80, 0.95)')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(42, 42, 62, 0.85)')}
+      >
+        重置图表
+      </button>
+    </div>
+  );
 };
 
 export default KlineChart;

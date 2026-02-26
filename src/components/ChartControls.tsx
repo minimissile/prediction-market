@@ -1,20 +1,16 @@
 import React from 'react';
-import { Card, Select, Switch, Space, Typography, Divider } from 'antd';
-import { LineChartOutlined, FundProjectionScreenOutlined } from '@ant-design/icons';
+import { Card, Select, Space, Typography, Divider } from 'antd';
+import { LineChartOutlined } from '@ant-design/icons';
 import type { SymbolConfig, TimeInterval } from '@/types';
-import { SYMBOLS, TIME_INTERVALS, POLYMARKET_INTERVALS } from '@/config';
+import { SYMBOLS, TIME_INTERVALS } from '@/config';
 
 const { Text } = Typography;
 
 interface ChartControlsProps {
   selectedSymbol: SymbolConfig;
   selectedInterval: TimeInterval;
-  polymarketInterval: TimeInterval;
-  showPolymarket: boolean;
   onSymbolChange: (symbol: SymbolConfig) => void;
   onIntervalChange: (interval: TimeInterval) => void;
-  onPolymarketIntervalChange: (interval: TimeInterval) => void;
-  onPolymarketToggle: (show: boolean) => void;
   priceInfo?: {
     lastPrice: number;
     priceChange: number;
@@ -28,12 +24,8 @@ interface ChartControlsProps {
 const ChartControls: React.FC<ChartControlsProps> = ({
   selectedSymbol,
   selectedInterval,
-  polymarketInterval,
-  showPolymarket,
   onSymbolChange,
   onIntervalChange,
-  onPolymarketIntervalChange,
-  onPolymarketToggle,
   priceInfo,
 }) => {
   const symbolOptions = SYMBOLS.map((s) => ({
@@ -42,11 +34,6 @@ const ChartControls: React.FC<ChartControlsProps> = ({
   }));
 
   const klineIntervalOptions = TIME_INTERVALS.map((i) => ({
-    value: i.value,
-    label: i.label,
-  }));
-
-  const polymarketIntervalOptions = POLYMARKET_INTERVALS.map((i) => ({
     value: i.value,
     label: i.label,
   }));
@@ -82,27 +69,7 @@ const ChartControls: React.FC<ChartControlsProps> = ({
               style={{ width: 100 }}
             />
           </Space>
-          <Divider type="vertical" />
-          {/* Polymarket控制 */}
-          <Space>
-            <FundProjectionScreenOutlined style={{ color: '#fa8c16' }} />
-            <Text type="secondary">Polymarket:</Text>
-            <Switch
-              checked={showPolymarket}
-              onChange={onPolymarketToggle}
-              disabled={!selectedSymbol.polymarketSlug}
-              size="small"
-            />
-            {showPolymarket && selectedSymbol.polymarketSlug && (
-              <Select
-                value={polymarketInterval}
-                onChange={onPolymarketIntervalChange}
-                options={polymarketIntervalOptions}
-                style={{ width: 100 }}
-                size="small"
-              />
-            )}
-          </Space>
+          {/* Polymarket控制已隐藏 */}
         </Space>
 
         {priceInfo && (

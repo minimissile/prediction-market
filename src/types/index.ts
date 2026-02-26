@@ -93,3 +93,26 @@ export interface ChartConfig {
   rayLines: RayLine[];
   showPolymarket: boolean;
 }
+
+// 下单请求
+export interface OrderRequest {
+  symbol: string;
+  interval: TimeInterval;
+  direction: 'Up' | 'Down';
+  amount: number;
+  privateKey: string;
+}
+
+// 下单结果
+export interface OrderResult {
+  success: boolean;
+  orderId?: string;
+  message: string;
+}
+
+// 市场 TokenId 信息
+export interface MarketTokenInfo {
+  upTokenId: string;
+  downTokenId: string;
+  lastTradePrice: number;
+}

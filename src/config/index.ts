@@ -38,30 +38,6 @@ export const SYMBOLS: SymbolConfig[] = [
     pricePrecision: 4,
     polymarketSlug: 'xrp',
   },
-  {
-    symbol: 'BNBUSDT',
-    name: 'BNB',
-    displayName: 'BNB/USDT',
-    baseAsset: 'BNB',
-    quoteAsset: 'USDT',
-    pricePrecision: 2,
-  },
-  {
-    symbol: 'ADAUSDT',
-    name: 'Cardano',
-    displayName: 'ADA/USDT',
-    baseAsset: 'ADA',
-    quoteAsset: 'USDT',
-    pricePrecision: 4,
-  },
-  {
-    symbol: 'DOGEUSDT',
-    name: 'Dogecoin',
-    displayName: 'DOGE/USDT',
-    baseAsset: 'DOGE',
-    quoteAsset: 'USDT',
-    pricePrecision: 5,
-  },
 ];
 
 // K线时间周期配置
@@ -97,7 +73,8 @@ export const API_CONFIG = {
     wsUrl: 'wss://stream.binance.com:9443/ws',
   },
   polymarket: {
-    baseUrl: 'https://clob.polymarket.com',
+    apiUrl: '/api/polymarket',
+    clobUrl: '/api/clob',
   },
 };
 
