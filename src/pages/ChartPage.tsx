@@ -4,7 +4,7 @@ import { SettingOutlined, TransactionOutlined } from '@ant-design/icons';
 import { KlineChart, ChartControls, OrderDialog } from '@/components';
 import { useKlineData } from '@/hooks/useKlineData';
 import { get24hrTicker } from '@/services/binanceService';
-import { getMultiIntervalOpenPrices, getMultiIntervalProbabilities } from '@/services/polymarketService';
+import { getMultiIntervalOpenPrices, getClobProbabilities } from '@/services/polymarketService';
 import { DEFAULT_SYMBOL, DEFAULT_INTERVAL } from '@/config';
 import type { SymbolConfig, TimeInterval, RayLine } from '@/types';
 
@@ -44,6 +44,7 @@ const ChartPage: React.FC = () => {
       label: string;
       endTime: number;
       probability: number;
+      upTokenId: string;
     }[]
   >([]);
   const [countdowns, setCountdowns] = useState<Record<TimeInterval, string>>({} as Record<TimeInterval, string>);
@@ -92,6 +93,9 @@ const ChartPage: React.FC = () => {
       setPolymarketOpenPrices([]);
       return;
     }
+
+    // 切换币种时立即清空旧数据
+    setPolymarketOpenPrices([]);
 
     let cancelled = false;
 
@@ -146,18 +150,21 @@ const ChartPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [polymarketOpenPrices]);
 
-  // 侧栏展开时，每秒更新预测概率
+  // 侧栏展开时，每秒通过 CLOB API 更新实时成交价
   useEffect(() => {
     if (!drawerOpen || !showPolymarket || polymarketOpenPrices.length === 0) return;
+
+    const tokenEntries = polymarketOpenPrices
+      .filter((item) => item.upTokenId)
+      .map((item) => ({ interval: item.interval, tokenId: item.upTokenId }));
+
+    if (tokenEntries.length === 0) return;
 
     let cancelled = false;
 
     const fetchProbabilities = async () => {
       try {
-        const probMap = await getMultiIntervalProbabilities(
-          selectedSymbol.baseAsset,
-          POLYMARKET_DEFAULT_INTERVALS
-        );
+        const probMap = await getClobProbabilities(tokenEntries);
         if (cancelled) return;
 
         setPolymarketOpenPrices((prev) =>

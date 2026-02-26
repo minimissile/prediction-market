@@ -6,6 +6,10 @@ const polymarketApi = axios.create({
   baseURL: API_CONFIG.polymarket.apiUrl,
 });
 
+const clobApi = axios.create({
+  baseURL: API_CONFIG.polymarket.clobUrl,
+});
+
 // Polymarket variant 映射
 const VARIANT_MAP: Record<string, string> = {
   '5m': 'fiveminute',
@@ -159,8 +163,106 @@ interface MarketsResponse {
       outcomePrices: string[];
       lastTradePrice: number;
       clobTokenIds: string[];
+      endDate: string;
     }[];
   }[];
+}
+
+/**
+ * 从多个匹配事件中找到当前周期的事件（endDate 在未来且最近的）
+ */
+function findCurrentMarket(
+  events: MarketsResponse['events'],
+  keyword: string
+): MarketsResponse['events'][0]['markets'][0] | null {
+  const now = Date.now();
+  let best: MarketsResponse['events'][0]['markets'][0] | null = null;
+  let bestEnd = Infinity;
+
+  for (const event of events) {
+    if (!event.title.includes(keyword)) continue;
+    const market = event.markets[0];
+    if (!market) continue;
+
+    const endMs = new Date(market.endDate).getTime();
+    // 选 endDate 在未来且最近的
+    if (endMs > now && endMs < bestEnd) {
+      best = market;
+      bestEnd = endMs;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * 从 markets API 获取某个币种在某个周期的当前市场数据（tokenId + 概率）
+ */
+async function getMarketDataForSymbol(
+  symbol: string,
+  interval: string
+): Promise<{ probability: number; upTokenId: string } | null> {
+  const category = CATEGORY_MAP[interval];
+  if (!category) return null;
+
+  try {
+    const response = await polymarketApi.get<MarketsResponse>('/crypto/markets', {
+      params: { _c: category, _sts: 'active', _l: 20 },
+    });
+
+    const keyword = SYMBOL_TITLE_MAP[symbol];
+    if (!keyword) return null;
+
+    const market = findCurrentMarket(response.data.events, keyword);
+    if (!market) return null;
+
+    const price = market.lastTradePrice ?? parseFloat(market.outcomePrices[0] || '0.5');
+    const upIndex = market.outcomes?.indexOf('Up') ?? 0;
+    const upTokenId = market.clobTokenIds?.[upIndex] ?? '';
+
+    return {
+      probability: Math.round(price * 1000) / 10,
+      upTokenId,
+    };
+  } catch (error) {
+    console.error(`Failed to fetch market data for ${symbol} ${interval}:`, error);
+    return null;
+  }
+}
+
+/**
+ * 通过 CLOB API 批量获取 token 的实时成交价
+ */
+async function getClobLastTradePrices(tokenIds: string[]): Promise<(number | null)[]> {
+  return Promise.all(
+    tokenIds.map(async (tokenId) => {
+      if (!tokenId) return null;
+      try {
+        const resp = await clobApi.get<{ price: string }>('/last-trade-price', {
+          params: { token_id: tokenId },
+        });
+        return parseFloat(resp.data.price);
+      } catch {
+        return null;
+      }
+    })
+  );
+}
+
+/**
+ * 通过 CLOB API 实时获取多个 tokenId 的最新成交价（百分比）
+ */
+export async function getClobProbabilities(
+  tokenEntries: { interval: TimeInterval; tokenId: string }[]
+): Promise<Record<string, number>> {
+  const prices = await getClobLastTradePrices(tokenEntries.map((e) => e.tokenId));
+  const result: Record<string, number> = {};
+  tokenEntries.forEach((entry, i) => {
+    if (prices[i] !== null) {
+      result[entry.interval] = Math.round(prices[i]! * 1000) / 10;
+    }
+  });
+  return result;
 }
 
 /**
@@ -182,19 +284,12 @@ async function getMarketProbabilities(
     });
 
     const result: Record<string, number> = {};
-    for (const event of response.data.events) {
-      const market = event.markets[0];
+    for (const [sym, keyword] of Object.entries(SYMBOL_TITLE_MAP)) {
+      const market = findCurrentMarket(response.data.events, keyword);
       if (!market) continue;
 
-      // 从标题中匹配币种
-      for (const [sym, keyword] of Object.entries(SYMBOL_TITLE_MAP)) {
-        if (event.title.includes(keyword)) {
-          // 使用 lastTradePrice 作为最新预测概率
-          const price = market.lastTradePrice ?? parseFloat(market.outcomePrices[0] || '0.5');
-          result[sym] = Math.round(price * 1000) / 10; // 转为百分比，保留1位小数
-          break;
-        }
-      }
+      const price = market.lastTradePrice ?? parseFloat(market.outcomePrices[0] || '0.5');
+      result[sym] = Math.round(price * 1000) / 10; // 转为百分比，保留1位小数
     }
 
     return result;
@@ -255,10 +350,11 @@ export async function getMultiIntervalOpenPrices(
     label: string;
     endTime: number;
     probability: number;
+    upTokenId: string;
   }[]
 > {
-  // 并行获取: 各周期的开盘价 + 各周期的市场概率
-  const [priceResults, ...probabilityResults] = await Promise.all([
+  // 并行获取: 各周期的开盘价 + 各周期的市场数据(tokenId + 初始概率)
+  const [priceResults, ...marketResults] = await Promise.all([
     // 获取所有周期的开盘价
     Promise.all(
       intervals.map(async (interval) => {
@@ -289,16 +385,29 @@ export async function getMultiIntervalOpenPrices(
         }
       })
     ),
-    // 获取各周期的市场概率
-    ...intervals.map((interval) => getMarketProbabilities(interval)),
+    // 获取各周期的市场数据 (tokenId + 概率)
+    ...intervals.map((interval) => getMarketDataForSymbol(symbol, interval)),
   ]);
 
-  // 合并概率数据: probabilityResults 是每个 interval 对应的 Record<symbol, probability>
-  const probabilityByInterval: Record<string, number> = {};
+  // 合并市场数据
+  const marketByInterval: Record<string, { probability: number; upTokenId: string }> = {};
   intervals.forEach((interval, i) => {
-    const probMap = probabilityResults[i] as Record<string, number>;
-    if (probMap && probMap[symbol] !== undefined) {
-      probabilityByInterval[interval] = probMap[symbol];
+    const data = marketResults[i] as { probability: number; upTokenId: string } | null;
+    if (data) {
+      marketByInterval[interval] = data;
+    }
+  });
+
+  // 收集所有 upTokenId，用 CLOB API 获取实时成交价
+  const tokenEntries = Object.entries(marketByInterval)
+    .filter(([, d]) => d.upTokenId)
+    .map(([interval, d]) => ({ interval, tokenId: d.upTokenId }));
+
+  const clobPrices = await getClobLastTradePrices(tokenEntries.map((e) => e.tokenId));
+  const clobByInterval: Record<string, number> = {};
+  tokenEntries.forEach((entry, i) => {
+    if (clobPrices[i] !== null) {
+      clobByInterval[entry.interval] = Math.round(clobPrices[i]! * 1000) / 10;
     }
   });
 
@@ -310,7 +419,11 @@ export async function getMultiIntervalOpenPrices(
       closePrice: r.closePrice,
       label: INTERVAL_LABELS[r.interval] || r.interval,
       endTime: r.endMs,
-      probability: probabilityByInterval[r.interval] ?? 50,
+      probability:
+        clobByInterval[r.interval] ??
+        marketByInterval[r.interval]?.probability ??
+        50,
+      upTokenId: marketByInterval[r.interval]?.upTokenId ?? '',
     }));
 }
 
@@ -358,24 +471,18 @@ export async function getMarketTokenIds(
     const keyword = SYMBOL_TITLE_MAP[symbol];
     if (!keyword) return null;
 
-    for (const event of response.data.events) {
-      if (!event.title.includes(keyword)) continue;
+    const market = findCurrentMarket(response.data.events, keyword);
+    if (!market || !market.clobTokenIds || market.clobTokenIds.length < 2) return null;
 
-      const market = event.markets[0];
-      if (!market || !market.clobTokenIds || market.clobTokenIds.length < 2) continue;
+    const upIndex = market.outcomes.indexOf('Up');
+    const downIndex = market.outcomes.indexOf('Down');
+    if (upIndex === -1 || downIndex === -1) return null;
 
-      const upIndex = market.outcomes.indexOf('Up');
-      const downIndex = market.outcomes.indexOf('Down');
-      if (upIndex === -1 || downIndex === -1) continue;
-
-      return {
-        upTokenId: market.clobTokenIds[upIndex]!,
-        downTokenId: market.clobTokenIds[downIndex]!,
-        lastTradePrice: market.lastTradePrice,
-      };
-    }
-
-    return null;
+    return {
+      upTokenId: market.clobTokenIds[upIndex]!,
+      downTokenId: market.clobTokenIds[downIndex]!,
+      lastTradePrice: market.lastTradePrice,
+    };
   } catch (error) {
     console.error(`Failed to fetch token IDs for ${symbol} ${interval}:`, error);
     return null;
