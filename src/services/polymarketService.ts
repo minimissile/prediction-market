@@ -124,3 +124,53 @@ export function getMockPredictionData(
 
   return { data, marketInfo };
 }
+
+/**
+ * 批量获取多个时间周期的预测数据
+ * 返回每个时间周期的开盘价
+ */
+export function getMultiIntervalPredictionData(
+  _symbol: string,
+  currentPrice: number,
+  intervals: TimeInterval[] = ['5m', '15m', '1h', '4h', '1d']
+): { interval: TimeInterval; openPrice: number; label: string }[] {
+  // 时间周期标签映射
+  const intervalLabels: Record<TimeInterval, string> = {
+    '1m': '1分钟',
+    '3m': '3分钟',
+    '5m': '5分钟',
+    '15m': '15分钟',
+    '30m': '30分钟',
+    '1h': '1小时',
+    '2h': '2小时',
+    '4h': '4小时',
+    '6h': '6小时',
+    '8h': '8小时',
+    '12h': '12小时',
+    '1d': '1天',
+    '3d': '3天',
+    '1w': '1周',
+    '1M': '1月',
+  };
+
+  // 为每个时间周期生成不同的开盘价（模拟不同周期有不同的开盘价）
+  // 使用确定性的偏移量，使同一周期的开盘价保持稳定
+  const intervalOffsets: Record<string, number> = {
+    '5m': -0.02,
+    '15m': -0.01,
+    '1h': 0.005,
+    '4h': 0.015,
+    '1d': 0.025,
+  };
+
+  return intervals.map((interval) => {
+    const offset = intervalOffsets[interval] ?? Math.random() * 0.06 - 0.03;
+    const openPrice = currentPrice > 0 ? currentPrice * (1 + offset) : 100000;
+
+    return {
+      interval,
+      openPrice: Math.round(openPrice * 100) / 100,
+      label: intervalLabels[interval] || interval,
+    };
+  });
+}

@@ -1,14 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Spin, Alert, Collapse } from 'antd';
+import { Row, Col, Spin, Alert, Collapse, Tag } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import { KlineChart, RayLineConfig, ChartControls } from '@/components';
 import { useKlineData } from '@/hooks/useKlineData';
 import { get24hrTicker } from '@/services/binanceService';
-import { getMockPredictionData } from '@/services/polymarketService';
+import {
+  getMockPredictionData,
+  getMultiIntervalPredictionData,
+} from '@/services/polymarketService';
 import { DEFAULT_SYMBOL, DEFAULT_INTERVAL, DEFAULT_POLYMARKET_INTERVAL } from '@/config';
 import type { SymbolConfig, TimeInterval, RayLine, PolymarketData } from '@/types';
 
-const POLYMARKET_OPEN_PRICE_RAY_ID = 'polymarket-open-price';
+// Polymarket射线ID前缀
+const POLYMARKET_RAY_PREFIX = 'polymarket-';
+
+// 各时间周期射线的颜色配置
+const INTERVAL_COLORS: Record<string, string> = {
+  '5m': '#52c41a', // 绿色
+  '15m': '#1890ff', // 蓝色
+  '1h': '#fa8c16', // 橙色
+  '4h': '#eb2f96', // 粉色
+  '1d': '#722ed1', // 紫色
+};
+
+// Polymarket默认获取的时间周期
+const POLYMARKET_DEFAULT_INTERVALS: TimeInterval[] = ['5m', '15m', '1h', '4h', '1d'];
 
 const ChartPage: React.FC = () => {
   const [selectedSymbol, setSelectedSymbol] = useState<SymbolConfig>(DEFAULT_SYMBOL);
@@ -19,7 +35,9 @@ const ChartPage: React.FC = () => {
   const [rayLines, setRayLines] = useState<RayLine[]>([]);
   const [showPolymarket, setShowPolymarket] = useState(false);
   const [polymarketData, setPolymarketData] = useState<PolymarketData[]>([]);
-  const [polymarketOpenPrice, setPolymarketOpenPrice] = useState<number | null>(null);
+  const [polymarketOpenPrices, setPolymarketOpenPrices] = useState<
+    { interval: TimeInterval; openPrice: number; label: string }[]
+  >([]);
   const [priceInfo, setPriceInfo] = useState<{
     lastPrice: number;
     priceChange: number;
@@ -56,7 +74,7 @@ const ChartPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedSymbol.symbol]);
 
-  // 获取Polymarket数据
+  // 获取Polymarket数据（当前选中周期的图表数据）
   useEffect(() => {
     if (showPolymarket && selectedSymbol.polymarketSlug) {
       const dataPointsMap: Record<TimeInterval, number> = {
@@ -79,65 +97,76 @@ const ChartPage: React.FC = () => {
 
       const dataPoints = dataPointsMap[polymarketInterval] || 100;
 
-      const { data, marketInfo } = getMockPredictionData(
+      const { data } = getMockPredictionData(
         selectedSymbol.symbol,
         priceInfo?.lastPrice || 0,
         dataPoints,
         polymarketInterval
       );
       setPolymarketData(data);
-      setPolymarketOpenPrice(marketInfo.openPrice);
     } else {
       setPolymarketData([]);
-      setPolymarketOpenPrice(null);
     }
   }, [showPolymarket, selectedSymbol, priceInfo?.lastPrice, polymarketInterval]);
 
-  // 处理Polymarket开盘价射线
+  // 获取所有时间周期的开盘价
   useEffect(() => {
-    // 当开启Polymarket且有开盘价时，添加射线
-    if (showPolymarket && polymarketOpenPrice !== null) {
+    if (showPolymarket && selectedSymbol.polymarketSlug && priceInfo?.lastPrice) {
+      const openPrices = getMultiIntervalPredictionData(
+        selectedSymbol.symbol,
+        priceInfo.lastPrice,
+        POLYMARKET_DEFAULT_INTERVALS
+      );
+      setPolymarketOpenPrices(openPrices);
+    } else {
+      setPolymarketOpenPrices([]);
+    }
+  }, [showPolymarket, selectedSymbol, priceInfo?.lastPrice]);
+
+  // 处理Polymarket多周期开盘价射线
+  useEffect(() => {
+    if (showPolymarket && polymarketOpenPrices.length > 0) {
       setRayLines((prev) => {
-        // 移除旧的开盘价射线
-        const filtered = prev.filter((ray) => ray.id !== POLYMARKET_OPEN_PRICE_RAY_ID);
-        // 添加新的开盘价射线
-        const openPriceRay: RayLine = {
-          id: POLYMARKET_OPEN_PRICE_RAY_ID,
-          price: polymarketOpenPrice,
-          color: '#fa8c16', // 橙色，与Polymarket数据线颜色一致
-          label: `Polymarket 开盘价: $${polymarketOpenPrice.toLocaleString()}`,
+        // 移除所有旧的Polymarket射线
+        const filtered = prev.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
+
+        // 添加所有时间周期的开盘价射线
+        const polymarketRays: RayLine[] = polymarketOpenPrices.map((item) => ({
+          id: `${POLYMARKET_RAY_PREFIX}${item.interval}`,
+          price: item.openPrice,
+          color: INTERVAL_COLORS[item.interval] || '#fa8c16',
+          label: `${item.label}: $${item.openPrice.toLocaleString()}`,
           lineStyle: 'dashed',
-          lineWidth: 2,
-        };
-        return [...filtered, openPriceRay];
+          lineWidth: 1,
+        }));
+
+        return [...filtered, ...polymarketRays];
       });
     }
 
-    // 当关闭Polymarket时，移除开盘价射线
+    // 当关闭Polymarket时，移除所有Polymarket射线
     if (!showPolymarket && prevShowPolymarket.current) {
-      setRayLines((prev) => prev.filter((ray) => ray.id !== POLYMARKET_OPEN_PRICE_RAY_ID));
+      setRayLines((prev) => prev.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX)));
     }
 
     prevShowPolymarket.current = showPolymarket;
-  }, [showPolymarket, polymarketOpenPrice]);
+  }, [showPolymarket, polymarketOpenPrices]);
 
   const handleSymbolChange = (symbol: SymbolConfig) => {
     setSelectedSymbol(symbol);
-    // 切换币种时清空用户添加的射线，但保留Polymarket开盘价射线
-    setRayLines((prev) => prev.filter((ray) => ray.id === POLYMARKET_OPEN_PRICE_RAY_ID));
+    // 切换币种时清空用户添加的射线，保留Polymarket射线会在下次effect中更新
+    setRayLines((prev) => prev.filter((ray) => ray.id.startsWith(POLYMARKET_RAY_PREFIX)));
   };
 
-  // 处理用户手动修改射线（排除Polymarket开盘价射线的修改）
+  // 处理用户手动修改射线
   const handleRayLinesChange = (newRayLines: RayLine[]) => {
-    // 保留Polymarket开盘价射线
-    const polymarketRay = rayLines.find((ray) => ray.id === POLYMARKET_OPEN_PRICE_RAY_ID);
-    if (polymarketRay && showPolymarket) {
-      // 确保Polymarket射线不被用户删除
-      const hasPolymarketRay = newRayLines.some((ray) => ray.id === POLYMARKET_OPEN_PRICE_RAY_ID);
-      if (!hasPolymarketRay) {
-        setRayLines([...newRayLines, polymarketRay]);
-        return;
-      }
+    // 保留Polymarket射线
+    const polymarketRays = rayLines.filter((ray) => ray.id.startsWith(POLYMARKET_RAY_PREFIX));
+    if (showPolymarket && polymarketRays.length > 0) {
+      // 合并用户射线和Polymarket射线
+      const userRays = newRayLines.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
+      setRayLines([...userRays, ...polymarketRays]);
+      return;
     }
     setRayLines(newRayLines);
   };
@@ -147,7 +176,7 @@ const ChartPage: React.FC = () => {
   }
 
   // 过滤掉Polymarket射线，只显示用户添加的射线供编辑
-  const userRayLines = rayLines.filter((ray) => ray.id !== POLYMARKET_OPEN_PRICE_RAY_ID);
+  const userRayLines = rayLines.filter((ray) => !ray.id.startsWith(POLYMARKET_RAY_PREFIX));
 
   return (
     <div
@@ -186,7 +215,7 @@ const ChartPage: React.FC = () => {
 
         <Col xs={24} xl={4}>
           <Collapse
-            defaultActiveKey={['rayline']}
+            defaultActiveKey={['rayline', 'polymarket']}
             size="small"
             items={[
               {
@@ -194,7 +223,7 @@ const ChartPage: React.FC = () => {
                 label: (
                   <span>
                     <SettingOutlined style={{ marginRight: 8 }} />
-                    射线配置
+                    自定义射线
                   </span>
                 ),
                 children: (
@@ -205,27 +234,38 @@ const ChartPage: React.FC = () => {
                   />
                 ),
               },
+              ...(showPolymarket && polymarketOpenPrices.length > 0
+                ? [
+                    {
+                      key: 'polymarket',
+                      label: <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>,
+                      children: (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {polymarketOpenPrices.map((item) => (
+                            <div
+                              key={item.interval}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <Tag color={INTERVAL_COLORS[item.interval]} style={{ margin: 0 }}>
+                                {item.label}
+                              </Tag>
+                              <span style={{ color: '#fff', fontWeight: 500 }}>
+                                ${item.openPrice.toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
             ]}
             style={{ background: '#1a1a2e' }}
           />
-          {showPolymarket && polymarketOpenPrice && (
-            <div
-              style={{
-                marginTop: 8,
-                padding: '8px 12px',
-                background: '#1a1a2e',
-                borderRadius: 6,
-                border: '1px solid #fa8c16',
-              }}
-            >
-              <div style={{ color: '#fa8c16', fontSize: 12, marginBottom: 4 }}>
-                Polymarket 开盘价
-              </div>
-              <div style={{ color: '#fff', fontWeight: 'bold' }}>
-                ${polymarketOpenPrice.toLocaleString()}
-              </div>
-            </div>
-          )}
         </Col>
       </Row>
     </div>
