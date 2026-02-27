@@ -179,6 +179,8 @@ const ChartPage: React.FC = () => {
   }, [polymarketOpenPrices]);
 
   // 侧栏展开时，每秒通过 CLOB API 更新实时成交价
+  const tokenIdsKey = polymarketOpenPrices.map((item) => item.upTokenId).join(',');
+
   useEffect(() => {
     if (!drawerOpen || !showPolymarket || polymarketOpenPrices.length === 0) return;
 
@@ -212,7 +214,7 @@ const ChartPage: React.FC = () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [drawerOpen, showPolymarket, selectedSymbol.baseAsset, polymarketOpenPrices.length]);
+  }, [drawerOpen, showPolymarket, tokenIdsKey]);
 
   // 处理Polymarket多周期开盘价射线
   useEffect(() => {
