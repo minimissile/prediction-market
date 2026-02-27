@@ -35,3 +35,13 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #4a4a6e;
 }
+
+/* 倒计时紧急闪烁动画 */
+@keyframes urgentPulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 77, 79, 0.5), inset 0 0 8px rgba(255, 77, 79, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(255, 77, 79, 0.8), inset 0 0 12px rgba(255, 77, 79, 0.2);
+  }
+}

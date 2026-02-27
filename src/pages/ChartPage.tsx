@@ -361,6 +361,8 @@ const ChartPage: React.FC = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {polymarketOpenPrices.map((item) => {
                           const isVisible = visibleIntervals[item.interval];
+                          const remaining = item.endTime - Date.now();
+                          const isUrgent = remaining > 0 && remaining < 60000; // 少于1分钟
                           return (
                             <div
                               key={item.interval}
@@ -368,9 +370,13 @@ const ChartPage: React.FC = () => {
                                 padding: '10px 12px',
                                 borderRadius: 6,
                                 background: isVisible ? 'rgba(255,255,255,0.04)' : 'transparent',
-                                border: `1px solid ${isVisible ? INTERVAL_COLORS[item.interval] + '40' : '#2a2a3e'}`,
-                                transition: 'all 0.2s ease',
+                                border: isUrgent
+                                  ? '1px solid #ff4d4f'
+                                  : `1px solid ${isVisible ? INTERVAL_COLORS[item.interval] + '40' : '#2a2a3e'}`,
+                                boxShadow: isUrgent ? '0 0 8px rgba(255,77,79,0.5), inset 0 0 8px rgba(255,77,79,0.1)' : 'none',
+                                transition: 'all 0.3s ease',
                                 opacity: isVisible ? 1 : 0.5,
+                                animation: isUrgent ? 'urgentPulse 1s ease-in-out infinite' : 'none',
                               }}
                             >
                               {/* 第一行: 开关 + 周期标签 + 开盘价 */}
