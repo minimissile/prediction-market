@@ -91,6 +91,9 @@ const ChartPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedSymbol.symbol]);
 
+  // 数据刷新函数引用
+  const fetchPolymarketDataRef = useRef<(() => Promise<void>) | null>(null);
+
   // 获取 Polymarket 预测数据（隐含价格 + 各周期开盘价）
   useEffect(() => {
     if (!showPolymarket || !selectedSymbol.polymarketSlug) {
@@ -117,21 +120,28 @@ const ChartPage: React.FC = () => {
       }
     };
 
+    // 保存引用以便倒计时结束时调用
+    fetchPolymarketDataRef.current = fetchData;
+
     fetchData();
     const interval = setInterval(fetchData, 60000); // 每分钟刷新
     return () => {
       cancelled = true;
       clearInterval(interval);
+      fetchPolymarketDataRef.current = null;
     };
   }, [showPolymarket, selectedSymbol]);
 
-  // 更新倒计时
+  // 更新倒计时，检测周期结束时立即刷新
+  const lastExpiredRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (polymarketOpenPrices.length === 0) return;
 
     const updateCountdowns = () => {
       const now = Date.now();
       const newCountdowns: Record<TimeInterval, string> = {} as Record<TimeInterval, string>;
+      let hasNewExpired = false;
 
       polymarketOpenPrices.forEach((item) => {
         const remaining = Math.max(0, item.endTime - now);
@@ -144,9 +154,23 @@ const ChartPage: React.FC = () => {
         } else {
           newCountdowns[item.interval] = `${minutes}:${String(seconds).padStart(2, '0')}`;
         }
+
+        // 检测周期是否刚结束
+        const key = `${item.interval}-${item.endTime}`;
+        if (remaining <= 0 && !lastExpiredRef.current.has(key)) {
+          lastExpiredRef.current.add(key);
+          hasNewExpired = true;
+        }
       });
 
       setCountdowns(newCountdowns);
+
+      // 有周期刚结束，延迟 1 秒后刷新数据（等待新周期数据可用）
+      if (hasNewExpired && fetchPolymarketDataRef.current) {
+        setTimeout(() => {
+          fetchPolymarketDataRef.current?.();
+        }, 1000);
+      }
     };
 
     updateCountdowns();
@@ -310,7 +334,12 @@ const ChartPage: React.FC = () => {
                     key: 'polymarket',
                     label: (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <span style={{ color: '#fa8c16' }}>Polymarket 开盘价</span>
+                        <span style={{ color: '#fa8c16' }}>
+                          Polymarket 开盘价
+                          <Tag color="gold" style={{ marginLeft: 8, fontSize: 12 }}>
+                            {selectedSymbol.displayName}
+                          </Tag>
+                        </span>
                         <Switch
                           size="small"
                           checked={Object.values(visibleIntervals).some(Boolean)}

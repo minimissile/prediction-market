@@ -331,6 +331,7 @@ export async function getCryptoPrice(
 
 /**
  * 批量获取多个周期的 Polymarket 开盘价数据 + 真实预测概率
+ * 优化：开盘价和市场数据全并行，成交价使用 markets API 的初始值（侧栏打开后会每秒更新）
  */
 export async function getMultiIntervalOpenPrices(
   symbol: string,
@@ -346,7 +347,7 @@ export async function getMultiIntervalOpenPrices(
     upTokenId: string;
   }[]
 > {
-  // 并行获取: 各周期的开盘价 + 各周期的市场数据(tokenId + 初始概率)
+  // 全并行获取: 各周期的开盘价 + 各周期的市场数据(tokenId + 初始概率)
   const [priceResults, ...marketResults] = await Promise.all([
     // 获取所有周期的开盘价
     Promise.all(
@@ -391,19 +392,8 @@ export async function getMultiIntervalOpenPrices(
     }
   });
 
-  // 收集所有 upTokenId，用 CLOB API 获取实时成交价
-  const tokenEntries = Object.entries(marketByInterval)
-    .filter(([, d]) => d.upTokenId)
-    .map(([interval, d]) => ({ interval, tokenId: d.upTokenId }));
-
-  const clobPrices = await getClobLastTradePrices(tokenEntries.map((e) => e.tokenId));
-  const clobByInterval: Record<string, number> = {};
-  tokenEntries.forEach((entry, i) => {
-    if (clobPrices[i] !== null) {
-      clobByInterval[entry.interval] = Math.round(clobPrices[i]! * 1000) / 10;
-    }
-  });
-
+  // 直接使用 markets API 的成交价作为初始值，不再等待 CLOB API
+  // 侧栏打开后会每秒通过 CLOB API 更新实时成交价
   return priceResults
     .filter((r): r is NonNullable<typeof r> => r !== null)
     .map((r) => ({
@@ -412,10 +402,7 @@ export async function getMultiIntervalOpenPrices(
       closePrice: r.closePrice,
       label: INTERVAL_LABELS[r.interval] || r.interval,
       endTime: r.endMs,
-      probability:
-        clobByInterval[r.interval] ??
-        marketByInterval[r.interval]?.probability ??
-        50,
+      probability: marketByInterval[r.interval]?.probability ?? 50,
       upTokenId: marketByInterval[r.interval]?.upTokenId ?? '',
     }));
 }
